@@ -1,0 +1,537 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Channel Picks</title>
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one working column; a toolbar above a scrollable section image with the drawing layer on top. */
+:root {
+  --bg: #f5f6f4; --panel: #ffffff; --fg: #1d2421; --muted: #5d6963; --line: #d5dad6;
+  --accent: #0b6e63; --accent-fg: #ffffff; --pick: #ffcf1f; --warn: #a3471b;
+  --sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root {
+  --bg: #121614; --panel: #1b201e; --fg: #e4e9e6; --muted: #98a59e; --line: #333b37;
+  --accent: #3cb7a6; --accent-fg: #0b1412; --pick: #ffd84a; --warn: #e58a5c; color-scheme: dark } }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 15px/1.5 var(--sans); padding: 20px 16px 40px; }
+.wrap { max-width: 1200px; margin: 0 auto; display: grid; gap: 16px; }
+.wrap > .wrap { width: 100%; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 16px; }
+h1 { font-size: 22px; font-weight: 600; margin: 0; text-wrap: balance; }
+h2 { font-size: 16px; font-weight: 600; margin: 0; }
+p { margin: 0; }
+.muted { color: var(--muted); }
+.mono { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-nums; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.tabs button { border: 0; background: none; padding: 8px 12px; font: 500 14px var(--sans); color: var(--muted); border-bottom: 2px solid transparent; cursor: pointer; }
+.tabs button[aria-selected="true"] { color: var(--fg); border-color: var(--accent); }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; display: grid; gap: 12px; min-width: 0; }
+.banner { border-color: var(--warn); color: var(--warn); font-size: 14px; }
+.row { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.row.spread { justify-content: space-between; }
+button.b, select { font: 500 14px var(--sans); color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 6px 12px; cursor: pointer; }
+input[type=text], input[type=password] { font: 14px var(--sans); color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 4px; padding: 6px 10px; }
+#code { font-family: var(--mono); text-transform: uppercase; }
+button.b.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+button.b:disabled { opacity: .5; cursor: default; }
+button.link { border: 0; background: none; padding: 0; font: inherit; color: var(--accent); text-decoration: underline; cursor: pointer; }
+button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+select { max-width: 100%; }
+.stagewrap { overflow: auto; max-height: 72vh; border: 1px solid var(--line); border-radius: 4px; background: #000; }
+.stage { position: relative; width: max-content; }
+.stage img { display: block; max-width: none; user-select: none; -webkit-user-drag: none; }
+.stage canvas { position: absolute; left: 0; top: 0; }
+#draw { cursor: crosshair; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; font: 13px var(--mono); border: 1px solid var(--line); border-radius: 999px; padding: 2px 4px 2px 10px; }
+.chip button { border: 0; background: none; color: var(--muted); cursor: pointer; font-size: 15px; line-height: 1; padding: 2px 6px; }
+.chip button:hover { color: var(--warn); }
+.status { font-size: 13px; color: var(--muted); }
+.status.bad { color: var(--warn); }
+.guide { white-space: pre-wrap; }
+details summary { cursor: pointer; font-weight: 500; }
+.keys { font-size: 13px; color: var(--muted); }
+kbd { font: 12px var(--mono); border: 1px solid var(--line); border-radius: 3px; padding: 0 4px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+th { font-weight: 500; color: var(--muted); }
+.tablewrap { overflow-x: auto; }
+.empty { padding: 28px 8px; text-align: center; color: var(--muted); }
+[hidden] { display: none !important; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1 id="title">Channel Picks</h1>
+    <span class="muted" id="role"></span>
+    <span class="mono muted" id="progress"></span>
+  </header>
+
+  <div class="panel banner" id="testbanner" hidden>Test mode: no Google Sheet is connected yet, so picks are kept only in this browser.</div>
+
+  <nav class="tabs" id="tabs" hidden>
+    <button data-tab="pick" aria-selected="true">Pick</button>
+    <button data-tab="results" aria-selected="false">Results</button>
+  </nav>
+
+  <!-- Pick -->
+  <section id="tab-pick" class="wrap">
+    <p class="muted" id="intro" hidden></p>
+    <details class="panel" id="guidebox" hidden open><summary>Labelling guide</summary><div class="guide" id="guidetext"></div></details>
+
+    <div class="panel">
+      <div class="row">
+        <label for="code">Your code</label>
+        <input type="text" id="code" size="8" maxlength="20" autocomplete="off" spellcheck="false" placeholder="e.g. S07">
+        <label for="level">Your experience</label>
+        <select id="level"><option value="">Choose…</option></select>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="row spread">
+        <div class="row">
+          <button class="b" id="prev" aria-label="Previous section">←</button>
+          <select id="secsel" aria-label="Section"></select>
+          <button class="b" id="next" aria-label="Next section">→</button>
+        </div>
+        <div class="row">
+          <button class="b" id="zout" aria-label="Zoom out">−</button>
+          <span class="mono" id="zlabel">100%</span>
+          <button class="b" id="zin" aria-label="Zoom in">+</button>
+        </div>
+      </div>
+
+      <div class="empty" id="nosec">Loading sections…</div>
+      <div class="stagewrap" id="pickwrap" hidden>
+        <div class="stage"><img id="pimg" alt="Seismic section"><canvas id="draw"></canvas></div>
+      </div>
+
+      <div class="row spread">
+        <div class="chips" id="chips"></div>
+        <label class="row"><input type="checkbox" id="none"> No channel in this section</label>
+      </div>
+      <div class="row spread">
+        <span class="keys">Click to add points. Click the first point, double-click or press <kbd>Enter</kbd> to close a shape. <kbd>Backspace</kbd> removes the last point, <kbd>Esc</kbd> drops the open shape. Moving to another section also saves.</span>
+        <div class="row"><span class="status" id="status" role="status"></span><button class="b primary" id="save">Save</button></div>
+      </div>
+    </div>
+    <p class="keys">Something went wrong? <button class="link" id="backup">Download a copy of my picks</button> and send it to the organiser.</p>
+  </section>
+
+  <!-- Results (organiser only, open the page with ?organiser) -->
+  <section id="tab-results" class="wrap" hidden>
+    <div class="panel">
+      <div class="row">
+        <label for="key">Organiser key</label><input type="password" id="key" size="18" autocomplete="off">
+        <button class="b primary" id="loadres">Load picks</button>
+        <span class="status" id="resstatus"></span>
+      </div>
+      <div class="row">
+        <label for="lvlfilter">Experience</label><select id="lvlfilter"><option value="">All</option></select>
+        <label for="exclude">Leave out codes</label><input type="text" id="exclude" size="18" placeholder="e.g. ORG, S05" spellcheck="false">
+      </div>
+    </div>
+    <div class="panel">
+      <div class="row spread">
+        <select id="rsel" aria-label="Section"></select>
+        <div class="row">
+          <label class="row"><input type="radio" name="mode" value="heat" checked> Heat map</label>
+          <label class="row"><input type="radio" name="mode" value="major"> Majority (≥ 50%)</label>
+          <label class="row" for="op">Opacity <input type="range" id="op" min="0" max="1" step="0.05" value="0.7"></label>
+        </div>
+      </div>
+      <p class="mono muted" id="rinfo"></p>
+      <div class="stagewrap" id="reswrap"><div class="stage"><img id="rimg" alt="Seismic section"><canvas id="heat"></canvas></div></div>
+      <div class="row"><button class="b" id="dlheat">Download heat map (PNG)</button><button class="b primary" id="dlall">Download all picks (JSON)</button></div>
+    </div>
+    <div class="panel">
+      <h2>Interpreters</h2>
+      <div class="tablewrap"><table><thead><tr><th>Code</th><th>Experience</th><th>Sections done</th></tr></thead><tbody id="people"></tbody></table></div>
+    </div>
+  </section>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const STORE = 'channel-picks-v1';
+const LEVELS = ['MSc student', 'PhD student', 'Postdoc or researcher', 'Industry interpreter', 'Other'];
+const params = new URLSearchParams(location.search);
+const organiser = params.has('organiser') || params.has('organizer');
+
+let cfg = { title: 'Channel Picks', intro: '', guide: '', scriptUrl: '' };
+let sections = [];
+// data[code][section] = { w, h, none, polys: [flat x,y arrays], level, t }; sent[code|section] = t of the last save the Sheet accepted.
+let state = { code: '', level: '', data: {}, sent: {} };
+let cur = -1, shapes = [], open = [], none = false, dirty = false, saving = false, zoom = 1, hover = null, hi = -1;
+let rows = [];
+const draw = $('#draw'), pimg = $('#pimg');
+
+const done = e => !!e && (e.none || e.polys?.length > 0);
+const scale = s => ($('#pickwrap').clientWidth - 2) / s.w * zoom;
+const setStatus = (t, bad) => { const el = $('#status'); el.textContent = t; el.classList.toggle('bad', !!bad); };
+const pairs = flat => { const q = []; for (let j = 0; j < flat.length; j += 2) q.push([flat[j], flat[j + 1]]); return q; };
+const mine = () => (state.data[state.code] ||= {});
+const validCode = c => /^(?=.*[A-Z])[A-Z0-9_-]{1,20}$/.test(c);
+const ready = () => validCode(state.code) && LEVELS.includes(state.level);
+const unsent = () => Object.entries(state.data).reduce((n, [c, p]) =>
+  n + Object.entries(p).filter(([k, e]) => state.sent[c + '|' + k] !== e.t).length, 0);
+function persist() { try { localStorage.setItem(STORE, JSON.stringify(state)); } catch {} }
+for (const sel of ['#level', '#lvlfilter']) for (const l of LEVELS) $(sel).add(new Option(l, l));
+
+async function init() {
+  try { const s = JSON.parse(localStorage.getItem(STORE)); if (s && typeof s === 'object') state = { ...state, ...s }; } catch {}
+  state.data ||= {}; state.sent ||= {};
+  $('#code').value = state.code; $('#level').value = state.level;
+
+  try { const r = await fetch('config.json', { cache: 'no-store' }); if (r.ok) cfg = { ...cfg, ...(await r.json()) }; } catch {}
+  document.title = $('#title').textContent = cfg.title || 'Channel Picks';
+  $('#intro').textContent = cfg.intro || ''; $('#intro').hidden = !cfg.intro;
+  $('#guidetext').textContent = cfg.guide || ''; $('#guidebox').hidden = !cfg.guide;
+  // The guide starts open; once someone closes it, it stays closed on their next visit.
+  if (state.guideClosed) $('#guidebox').open = false;
+  $('#guidebox').addEventListener('toggle', () => { state.guideClosed = !$('#guidebox').open; persist(); });
+  $('#testbanner').hidden = !!cfg.scriptUrl;
+  if (organiser) {
+    $('#tabs').hidden = false; $('#role').textContent = 'Organiser';
+    try { $('#key').value = sessionStorage.getItem('channel-picks-key') || ''; } catch {}
+  }
+
+  // Sections are listed in sections/list.json and shown in that order.
+  let names = [];
+  try { const r = await fetch('sections/list.json', { cache: 'no-store' }); names = await r.json(); }
+  catch { $('#nosec').textContent = 'Could not load the sections. Open this page through its web link, not as a file on your computer.'; }
+  for (const name of names) {
+    const im = new Image(); im.src = 'sections/' + encodeURIComponent(name);
+    try { await im.decode(); sections.push({ name, url: im.src, w: im.naturalWidth, h: im.naturalHeight }); }
+    catch { console.warn('Could not load section image', name); }
+  }
+  if (names.length && !sections.length) $('#nosec').textContent = 'The section images could not be loaded.';
+  $('#nosec').hidden = sections.length > 0; $('#pickwrap').hidden = !sections.length;
+  if (sections.length) show(0); else renderNav();
+  flushUnsent();
+}
+
+/* Picking */
+function renderNav() {
+  const sel = $('#secsel'), picks = state.data[state.code] || {}, n = sections.filter(s => done(picks[s.name])).length;
+  sel.innerHTML = '';
+  sections.forEach((s, i) => sel.add(new Option(`${i + 1}. ${s.name}${done(picks[s.name]) ? '  ✓' : ''}`, i)));
+  sel.value = cur;
+  const u = cfg.scriptUrl ? unsent() : 0;
+  $('#progress').textContent = sections.length ? `${n} / ${sections.length} done${u ? ` · ${u} not sent yet` : ''}` : '';
+}
+
+async function load(i) {
+  if (dirty && !(await save())) return;
+  show(i);
+}
+
+function show(i) {
+  cur = i;
+  const s = sections[i], e = (state.data[state.code] || {})[s.name];
+  shapes = e ? e.polys.map(p => p.slice()) : [];
+  none = !!e?.none; open = []; dirty = false; hi = -1;
+  $('#none').checked = none;
+  $('#prev').disabled = i === 0; $('#next').disabled = i === sections.length - 1;
+  pimg.src = s.url;
+  setStatus(done(e) ? 'Saved' : '');
+  renderNav(); layout();
+}
+
+function layout() {
+  const s = sections[cur]; if (!s) return;
+  const k = scale(s), w = Math.round(s.w * k), h = Math.round(s.h * k), r = devicePixelRatio || 1;
+  for (const el of [pimg, draw]) { el.style.width = w + 'px'; el.style.height = h + 'px'; }
+  draw.width = w * r; draw.height = h * r;
+  $('#zlabel').textContent = Math.round(zoom * 100) + '%';
+  render();
+}
+
+function paint() {
+  const s = sections[cur]; if (!s) return;
+  const k = scale(s), r = devicePixelRatio || 1, g = draw.getContext('2d');
+  g.setTransform(r, 0, 0, r, 0, 0); g.clearRect(0, 0, draw.width, draw.height);
+  const pick = getComputedStyle(document.documentElement).getPropertyValue('--pick').trim();
+  const path = p => { g.beginPath(); for (let j = 0; j < p.length; j += 2) g.lineTo(p[j] * k, p[j + 1] * k); };
+  shapes.forEach((p, i) => {
+    path(p); g.closePath();
+    g.fillStyle = i === hi ? 'rgba(255,90,60,.45)' : 'rgba(255,207,31,.28)'; g.fill();
+    g.lineWidth = 2; g.strokeStyle = i === hi ? '#ff5a3c' : pick; g.stroke();
+  });
+  if (open.length) {
+    path(hover ? [...open, hover[0], hover[1]] : open);
+    g.lineWidth = 2; g.strokeStyle = pick; g.setLineDash([6, 4]); g.stroke(); g.setLineDash([]);
+    for (let j = 0; j < open.length; j += 2) {
+      g.beginPath(); g.arc(open[j] * k, open[j + 1] * k, j ? 3 : 6, 0, 7);
+      g.fillStyle = j ? pick : '#fff'; g.fill(); g.strokeStyle = '#000'; g.lineWidth = 1; g.stroke();
+    }
+  }
+}
+
+function render() {
+  paint();
+  $('#chips').innerHTML = '';
+  shapes.forEach((p, i) => {
+    const c = document.createElement('span'); c.className = 'chip';
+    c.textContent = `Shape ${i + 1} · ${p.length / 2} pts`;
+    const x = document.createElement('button'); x.textContent = '×'; x.setAttribute('aria-label', `Delete shape ${i + 1}`);
+    x.onclick = () => { shapes.splice(i, 1); hi = -1; edited(); };
+    c.onmouseenter = () => { hi = i; paint(); }; c.onmouseleave = () => { hi = -1; paint(); };
+    c.append(x); $('#chips').append(c);
+  });
+  $('#none').disabled = shapes.length > 0 || open.length > 0;
+}
+
+function edited() { dirty = true; setStatus('Unsaved changes'); render(); }
+function closeShape() { if (open.length >= 6) { shapes.push(open); open = []; edited(); } }
+const pt = ev => { const k = scale(sections[cur]); return [ev.offsetX / k, ev.offsetY / k]; };
+const askDetails = () => setStatus('Enter your code and choose your experience first.', true);
+
+draw.addEventListener('click', ev => {
+  if (!sections[cur]) return;
+  if (!ready()) return askDetails();
+  if (none) return setStatus('Untick "No channel" to draw.', true);
+  const [x, y] = pt(ev), k = scale(sections[cur]);
+  if (open.length >= 6 && Math.hypot((open[0] - x) * k, (open[1] - y) * k) < 10) return closeShape();
+  open.push(x, y); edited();
+});
+draw.addEventListener('dblclick', () => { open.splice(-2); closeShape(); });
+draw.addEventListener('mousemove', ev => { hover = pt(ev); if (open.length) paint(); });
+draw.addEventListener('mouseleave', () => { hover = null; paint(); });
+document.addEventListener('keydown', ev => {
+  if ($('#tab-pick').hidden || /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
+  if (ev.key === 'Enter') closeShape();
+  else if (ev.key === 'Escape' && open.length) { open = []; edited(); }
+  else if (ev.key === 'Backspace' && open.length) { ev.preventDefault(); open.splice(-2); edited(); }
+});
+addEventListener('beforeunload', ev => { if (dirty) { ev.preventDefault(); ev.returnValue = ''; } });
+
+// Saves the current section in this browser first, then sends it to the Google Sheet.
+async function save() {
+  const s = sections[cur]; if (!s || saving) return false;
+  if (!ready()) { askDetails(); return false; }
+  closeShape(); open = [];
+  const e = { w: s.w, h: s.h, none: none && !shapes.length, polys: shapes.map(p => p.map(v => Math.round(v * 10) / 10)), level: state.level, t: new Date().toISOString() };
+  mine()[s.name] = e; persist(); dirty = false; render();
+  const all = sections.every(x => done(mine()[x.name]));
+  const msg = !done(e) ? 'Saved, but nothing is picked here yet' : all ? 'Saved. All sections are done, thank you!' : 'Saved';
+  if (!cfg.scriptUrl) { setStatus(msg + ' (in this browser only)'); renderNav(); return true; }
+  saving = true; setStatus('Saving…');
+  const ok = await send(state.code, s.name, e);
+  saving = false; renderNav();
+  setStatus(ok ? msg : 'Not sent yet. Your picks are kept in this browser and will be sent the next time you save.', !ok);
+  if (ok) flushUnsent();
+  return true;
+}
+
+async function send(code, name, e) {
+  const body = { code, level: e.level || '', section: name, width: e.w, height: e.h, no_channel: !!e.none, polygons: e.polys.map(pairs), client_time: e.t };
+  try {
+    // A plain-text body keeps this a "simple" request, which Google Apps Script accepts from any site.
+    const r = await fetch(cfg.scriptUrl, { method: 'POST', body: JSON.stringify(body) });
+    const j = await r.json();
+    if (!j.ok) { console.warn('The Sheet refused this save:', j.error); return false; }
+    state.sent[code + '|' + name] = e.t; persist(); return true;
+  } catch (err) { console.warn('Could not reach the Sheet:', err); return false; }
+}
+
+// Retries saves that did not reach the Sheet, for example after a dropped connection.
+let flushing = false;
+async function flushUnsent() {
+  if (!cfg.scriptUrl || flushing) return;
+  flushing = true;
+  try {
+    for (const [code, picks] of Object.entries(state.data))
+      for (const [name, e] of Object.entries(picks))
+        if (state.sent[code + '|' + name] !== e.t && !(await send(code, name, e))) return;
+  } finally { flushing = false; renderNav(); }
+}
+
+$('#code').addEventListener('change', e => {
+  const c = e.target.value.trim().toUpperCase().replace(/\s+/g, '');
+  e.target.value = c;
+  if (c && !validCode(c)) return setStatus('Use letters and numbers only, for example S07.', true);
+  state.code = c; persist(); setStatus('');
+  if (sections[cur] && !dirty) show(cur); else renderNav();
+});
+$('#level').onchange = e => { state.level = e.target.value; persist(); };
+$('#save').onclick = save;
+$('#none').onchange = e => { none = e.target.checked; edited(); };
+$('#prev').onclick = () => cur > 0 && load(cur - 1);
+$('#next').onclick = () => cur < sections.length - 1 && load(cur + 1);
+$('#secsel').onchange = e => load(+e.target.value);
+$('#zin').onclick = () => { zoom = Math.min(4, zoom * 1.25); layout(); };
+$('#zout').onclick = () => { zoom = Math.max(0.5, zoom / 1.25); layout(); };
+addEventListener('resize', () => { layout(); renderResults(); });
+
+function saveFile(name, blob) {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+$('#backup').onclick = () => {
+  if (!validCode(state.code)) return askDetails();
+  const out = {
+    interpreter: state.code, level: state.level, exported: new Date().toISOString(),
+    note: 'Polygon vertices are [x, y] in image pixels, origin at the top-left corner.',
+    sections: Object.fromEntries(Object.entries(mine()).map(([k, e]) => [k, { width: e.w, height: e.h, no_channel: !!e.none, polygons: e.polys.map(pairs), saved: e.t }])),
+  };
+  saveFile(`picks_${state.code}.json`, new Blob([JSON.stringify(out, null, 1)], { type: 'application/json' }));
+};
+
+/* Tabs */
+document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('#tabs button').forEach(x => x.setAttribute('aria-selected', x === b));
+  ['pick', 'results'].forEach(t => $('#tab-' + t).hidden = t !== b.dataset.tab);
+  if (b.dataset.tab === 'pick') layout(); else renderResults();
+});
+
+/* Organiser: results */
+$('#loadres').onclick = async () => {
+  const st = $('#resstatus');
+  if (!cfg.scriptUrl) {
+    // Test mode: use the picks saved in this browser.
+    rows = [];
+    for (const [code, picks] of Object.entries(state.data)) for (const [name, e] of Object.entries(picks))
+      rows.push({ code, level: e.level || '', section: name, width: e.w, height: e.h, no_channel: !!e.none, polygons: e.polys.map(pairs), client_time: e.t });
+    st.textContent = `Test mode: ${rows.length} saves from this browser.`;
+    return renderResults();
+  }
+  const key = $('#key').value.trim();
+  try { sessionStorage.setItem('channel-picks-key', key); } catch {}
+  st.textContent = 'Loading…';
+  try {
+    const r = await fetch(cfg.scriptUrl, { method: 'POST', body: JSON.stringify({ action: 'list', key }) });
+    const j = await r.json();
+    if (!j.ok) throw new Error(j.error || 'refused');
+    rows = j.rows; st.textContent = `${rows.length} saves loaded.`;
+  } catch (err) { st.textContent = err.message === 'wrong key' ? 'Wrong organiser key.' : 'Could not load the picks.'; }
+  renderResults();
+};
+
+// Latest save per interpreter and section. Rows arrive in the order they were saved.
+function latest() {
+  const lv = {}, by = {};
+  const skip = new Set($('#exclude').value.toUpperCase().split(/[\s,;]+/).filter(Boolean));
+  for (const r of rows) { const c = String(r.code).toUpperCase(); lv[c] = r.level; (by[c] ||= {})[r.section] = r; }
+  const want = $('#lvlfilter').value;
+  return Object.keys(by).filter(c => !skip.has(c) && (!want || lv[c] === want)).sort()
+    .map(c => ({ code: c, level: lv[c], picks: by[c] }));
+}
+const counted = e => !!e && (e.no_channel === true || e.polygons?.length > 0);
+
+function heat(s, people) {
+  const c = document.createElement('canvas'); c.width = s.w; c.height = s.h;
+  const g = c.getContext('2d', { willReadFrequently: true }), acc = new Float32Array(s.w * s.h), masks = [];
+  let nNone = 0, mismatch = 0;
+  for (const p of people) {
+    const e = p.picks[s.name]; if (!counted(e)) continue;
+    if (+e.width !== s.w || +e.height !== s.h) { mismatch++; continue; }
+    const m = new Uint8Array(s.w * s.h); masks.push(m);
+    if (!e.polygons.length) { nNone++; continue; }
+    g.clearRect(0, 0, s.w, s.h); g.fillStyle = '#fff';
+    for (const q of e.polygons) { g.beginPath(); for (const [x, y] of q) g.lineTo(x, y); g.fill(); }
+    const d = g.getImageData(0, 0, s.w, s.h).data;
+    for (let i = 0; i < m.length; i++) if (d[i * 4 + 3] > 127) { m[i] = 1; acc[i]++; }
+  }
+  if (masks.length) for (let i = 0; i < acc.length; i++) acc[i] /= masks.length;
+  return { acc, n: masks.length, masks, nNone, mismatch };
+}
+
+// Mean Dice over all pairs of interpreters. Two empty masks count as full agreement.
+function meanDice(masks) {
+  const sums = masks.map(m => m.reduce((a, v) => a + v, 0));
+  let tot = 0, k = 0;
+  for (let a = 0; a < masks.length; a++) for (let b = a + 1; b < masks.length; b++) {
+    const s = sums[a] + sums[b]; let inter = 0;
+    if (s) { const A = masks[a], B = masks[b]; for (let i = 0; i < A.length; i++) inter += A[i] & B[i]; }
+    tot += s ? 2 * inter / s : 1; k++;
+  }
+  return k ? tot / k : NaN;
+}
+
+const YLORRD = [[255, 255, 178], [254, 204, 92], [253, 141, 60], [240, 59, 32], [189, 0, 38]];
+function cmap(v) {
+  const x = v * (YLORRD.length - 1), i = Math.min(YLORRD.length - 2, Math.floor(x)), t = x - i;
+  return YLORRD[i].map((a, j) => a + (YLORRD[i + 1][j] - a) * t);
+}
+const isMajor = () => document.querySelector('input[name=mode]:checked').value === 'major';
+
+function renderResults() {
+  if (!organiser || $('#tab-results').hidden) return;
+  const people = latest(), sel = $('#rsel'), keep = sel.value;
+  sel.innerHTML = '';
+  sections.forEach((s, i) => sel.add(new Option(`${i + 1}. ${s.name}`, s.name)));
+  if (keep) sel.value = keep;
+  const s = sections.find(x => x.name === sel.value), cv = $('#heat'), rimg = $('#rimg');
+  $('#reswrap').hidden = !s;
+  if (s) {
+    const { acc, n, masks, nNone, mismatch } = heat(s, people), major = isMajor();
+    const w = Math.round($('#reswrap').clientWidth - 2), h = Math.round(s.h * w / s.w);
+    rimg.src = s.url;
+    for (const el of [rimg, cv]) { el.style.width = w + 'px'; el.style.height = h + 'px'; }
+    cv.width = s.w; cv.height = s.h; cv.style.opacity = $('#op').value;
+    const g = cv.getContext('2d'), im = g.createImageData(s.w, s.h);
+    for (let i = 0; i < acc.length; i++) {
+      const v = acc[i]; if (!v || (major && v < 0.5)) continue;
+      const [r, gg, b] = major ? [40, 220, 200] : cmap(v);
+      im.data.set([r, gg, b, major ? 150 : 90 + 165 * v], i * 4);
+    }
+    g.putImageData(im, 0, 0);
+    const d = meanDice(masks);
+    $('#rinfo').textContent = `${n} interpreter${n === 1 ? '' : 's'}` + (nNone ? ` (${nNone} marked no channel)` : '') +
+      (n > 1 ? ` · mean pairwise Dice ${d.toFixed(2)}` : '') + ` · ${s.w} × ${s.h} px` +
+      (mismatch ? ` · ${mismatch} left out: picked on an image of a different size` : '');
+  } else $('#rinfo').textContent = rows.length ? '' : 'Load the picks to see results.';
+  const tb = $('#people');
+  tb.innerHTML = people.length ? '' : '<tr><td colspan="3" class="empty">No picks loaded.</td></tr>';
+  for (const p of people) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td class="mono"></td><td></td><td class="mono"></td>';
+    tr.children[0].textContent = p.code;
+    tr.children[1].textContent = p.level || '–';
+    tr.children[2].textContent = `${sections.filter(x => counted(p.picks[x.name])).length} / ${sections.length}`;
+    tb.append(tr);
+  }
+}
+$('#rsel').onchange = renderResults;
+$('#lvlfilter').onchange = renderResults;
+$('#exclude').onchange = renderResults;
+$('#op').oninput = e => $('#heat').style.opacity = e.target.value;
+document.querySelectorAll('input[name=mode]').forEach(r => r.onchange = () => {
+  $('#dlheat').textContent = isMajor() ? 'Download label (PNG)' : 'Download heat map (PNG)';
+  renderResults();
+});
+
+$('#dlheat').onclick = () => {
+  const s = sections.find(x => x.name === $('#rsel').value); if (!s) return;
+  const { acc, n } = heat(s, latest()), major = isMajor(), c = document.createElement('canvas'); c.width = s.w; c.height = s.h;
+  const g = c.getContext('2d'), im = g.createImageData(s.w, s.h);
+  // Heat map: grey level = fraction of interpreters. Label: white where at least half picked.
+  for (let i = 0; i < acc.length; i++) { const v = major ? (acc[i] >= 0.5) * 255 : Math.round(acc[i] * 255); im.data.set([v, v, v, 255], i * 4); }
+  g.putImageData(im, 0, 0);
+  c.toBlob(b => saveFile(`${s.name.replace(/\.\w+$/, '')}_${major ? 'label' : 'heatmap'}_n${n}.png`, b), 'image/png');
+};
+
+$('#dlall').onclick = () => {
+  const out = latest().flatMap(p => Object.values(p.picks).map(r => ({ ...r, code: p.code, level: p.level })));
+  saveFile(`channel_picks_${new Date().toISOString().slice(0, 10)}.json`, new Blob([JSON.stringify({
+    exported: new Date().toISOString(),
+    note: 'Latest save per interpreter and section. Polygon vertices are [x, y] in image pixels, origin at the top-left corner.',
+    rows: out,
+  }, null, 1)], { type: 'application/json' }));
+};
+
+init();
+</script>
+</body>
+</html>
