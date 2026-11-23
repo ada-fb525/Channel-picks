@@ -89,8 +89,8 @@ th { font-weight: 500; color: var(--muted); }
 
     <div class="panel">
       <div class="row">
-        <label for="code">Your code</label>
-        <input type="text" id="code" size="8" maxlength="20" autocomplete="off" spellcheck="false" placeholder="e.g. S07">
+        <label for="code">Your name or code</label>
+        <input type="text" id="code" size="18" maxlength="40" autocomplete="off" spellcheck="false" placeholder="e.g. Sara Ahmadi or S07">
         <label for="level">Your experience</label>
         <select id="level"><option value="">Choose…</option></select>
       </div>
@@ -155,7 +155,7 @@ th { font-weight: 500; color: var(--muted); }
     </div>
     <div class="panel">
       <h2>Interpreters</h2>
-      <div class="tablewrap"><table><thead><tr><th>Code</th><th>Experience</th><th>Sections done</th></tr></thead><tbody id="people"></tbody></table></div>
+      <div class="tablewrap"><table><thead><tr><th>Name or code</th><th>Experience</th><th>Sections done</th></tr></thead><tbody id="people"></tbody></table></div>
     </div>
   </section>
 </div>
@@ -294,7 +294,7 @@ function render() {
 function edited() { dirty = true; setStatus('Unsaved changes'); render(); }
 function closeShape() { if (open.length >= 6) { shapes.push(open); open = []; edited(); } }
 const pt = ev => { const k = scale(sections[cur]); return [ev.offsetX / k, ev.offsetY / k]; };
-const askDetails = () => setStatus('Enter your code and choose your experience first.', true);
+const askDetails = () => setStatus('Enter your name or code and choose your experience first.', true);
 
 draw.addEventListener('click', ev => {
   if (!sections[cur]) return;
@@ -356,10 +356,13 @@ async function flushUnsent() {
   } finally { flushing = false; renderNav(); }
 }
 
+// Names and codes become one ID: "Sara Ahmadi" is stored as SARA_AHMADI.
+const toId = s => s.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').trim().toUpperCase()
+  .replace(/[\s.]+/g, '_').replace(/[^A-Z0-9_-]/g, '').slice(0, 20);
 $('#code').addEventListener('change', e => {
-  const c = e.target.value.trim().toUpperCase().replace(/\s+/g, '');
+  const raw = e.target.value, c = toId(raw);
+  if (raw.trim() && !validCode(c)) return setStatus('Please use English letters or numbers, for example Sara Ahmadi or S07.', true);
   e.target.value = c;
-  if (c && !validCode(c)) return setStatus('Use letters and numbers only, for example S07.', true);
   state.code = c; persist(); setStatus('');
   if (sections[cur] && !dirty) show(cur); else renderNav();
 });

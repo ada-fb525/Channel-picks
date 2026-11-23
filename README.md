@@ -58,7 +58,7 @@ To change something later, edit or upload the file on GitHub. The site updates w
 
 ## 5. Send it to the interpreters
 
-Send each person the link and their own code (`S01`, `S02`, …). Codes must contain at least one letter. Keep any list of who has which code separate from the data.
+Send each person the link. They can type their name or a code you give them (`S01`, `S02`, …). The page turns both into one ID, for example `Sara Ahmadi` becomes `SARA_AHMADI`, using English letters and numbers only. Codes keep the data anonymous. Names are personal data, so check with your supervisor whether you need consent for them.
 
 Picks are also kept in each person's browser. If they come back on the same computer and browser, they can continue where they stopped. If a save does not reach the Sheet, the page says so and tries again on the next save. As a last resort, there is a **Download a copy of my picks** link at the bottom of the page.
 
@@ -88,6 +88,6 @@ Only the latest save per interpreter and section counts. The script writes, per 
 ## Things to know
 
 - The repository is public, so the page and the section images are public. Check that the data licence allows you to share the images.
-- The Sheet stores code, experience level, section name, image size, polygons and save times. It stores no names or email addresses.
+- The Sheet stores the name or code, experience level, section name, image size, polygons and save times. It stores no email addresses.
 - Anyone with the site link can submit picks. Each row records its code, so you can delete unexpected rows.
 - Test mode: if `scriptUrl` in `config.json` is empty, the page shows a banner and keeps picks only in the browser. You can try it on your own computer by running `python -m http.server` in this folder and opening `http://localhost:8000`.
