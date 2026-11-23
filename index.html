@@ -145,7 +145,15 @@ th { font-weight: 500; color: var(--muted); }
         <select id="rsel" aria-label="Section"></select>
         <div class="row">
           <label class="row"><input type="radio" name="mode" value="heat" checked> Heat map</label>
-          <label class="row"><input type="radio" name="mode" value="major"> Majority (≥ 50%)</label>
+          <label class="row"><input type="radio" name="mode" value="major"> Label</label>
+          <label class="row" for="thr">Label rule <select id="thr">
+            <option value="maj">More than half</option>
+            <option value="0.6">At least 60%</option>
+            <option value="0.7">At least 70%</option>
+            <option value="0.8">At least 80%</option>
+            <option value="0.9">At least 90%</option>
+            <option value="1">Everyone</option>
+          </select></label>
           <label class="row" for="op">Opacity <input type="range" id="op" min="0" max="1" step="0.05" value="0.7"></label>
         </div>
       </div>
@@ -468,6 +476,8 @@ function cmap(v) {
   return YLORRD[i].map((a, j) => a + (YLORRD[i + 1][j] - a) * t);
 }
 const isMajor = () => document.querySelector('input[name=mode]:checked').value === 'major';
+// How many of n interpreters must pick a pixel for it to be in the label.
+function needed(n) { const t = $('#thr').value; return t === 'maj' ? Math.floor(n / 2) + 1 : Math.ceil(+t * n - 1e-9); }
 
 function renderResults() {
   if (!organiser || $('#tab-results').hidden) return;
@@ -478,21 +488,21 @@ function renderResults() {
   const s = sections.find(x => x.name === sel.value), cv = $('#heat'), rimg = $('#rimg');
   $('#reswrap').hidden = !s;
   if (s) {
-    const { acc, n, masks, nNone, mismatch } = heat(s, people), major = isMajor();
+    const { acc, n, masks, nNone, mismatch } = heat(s, people), major = isMajor(), k = needed(n);
     const w = Math.round($('#reswrap').clientWidth - 2), h = Math.round(s.h * w / s.w);
     rimg.src = s.url;
     for (const el of [rimg, cv]) { el.style.width = w + 'px'; el.style.height = h + 'px'; }
     cv.width = s.w; cv.height = s.h; cv.style.opacity = $('#op').value;
     const g = cv.getContext('2d'), im = g.createImageData(s.w, s.h);
     for (let i = 0; i < acc.length; i++) {
-      const v = acc[i]; if (!v || (major && v < 0.5)) continue;
+      const v = acc[i]; if (!v || (major && Math.round(v * n) < k)) continue;
       const [r, gg, b] = major ? [40, 220, 200] : cmap(v);
       im.data.set([r, gg, b, major ? 150 : 90 + 165 * v], i * 4);
     }
     g.putImageData(im, 0, 0);
     const d = meanDice(masks);
     $('#rinfo').textContent = `${n} interpreter${n === 1 ? '' : 's'}` + (nNone ? ` (${nNone} marked no channel)` : '') +
-      (n > 1 ? ` · mean pairwise Dice ${d.toFixed(2)}` : '') + ` · ${s.w} × ${s.h} px` +
+      (n > 1 ? ` · mean pairwise Dice ${d.toFixed(2)}` : '') + (major && n ? ` · label = picked by at least ${k} of ${n}` : '') + ` · ${s.w} × ${s.h} px` +
       (mismatch ? ` · ${mismatch} left out: picked on an image of a different size` : '');
   } else $('#rinfo').textContent = rows.length ? '' : 'Load the picks to see results.';
   const tb = $('#people');
@@ -507,6 +517,7 @@ function renderResults() {
   }
 }
 $('#rsel').onchange = renderResults;
+$('#thr').onchange = renderResults;
 $('#lvlfilter').onchange = renderResults;
 $('#exclude').onchange = renderResults;
 $('#op').oninput = e => $('#heat').style.opacity = e.target.value;
@@ -517,12 +528,13 @@ document.querySelectorAll('input[name=mode]').forEach(r => r.onchange = () => {
 
 $('#dlheat').onclick = () => {
   const s = sections.find(x => x.name === $('#rsel').value); if (!s) return;
-  const { acc, n } = heat(s, latest()), major = isMajor(), c = document.createElement('canvas'); c.width = s.w; c.height = s.h;
+  const { acc, n } = heat(s, latest()), major = isMajor(), k = needed(n), c = document.createElement('canvas'); c.width = s.w; c.height = s.h;
   const g = c.getContext('2d'), im = g.createImageData(s.w, s.h);
-  // Heat map: grey level = fraction of interpreters. Label: white where at least half picked.
-  for (let i = 0; i < acc.length; i++) { const v = major ? (acc[i] >= 0.5) * 255 : Math.round(acc[i] * 255); im.data.set([v, v, v, 255], i * 4); }
+  // Heat map: grey level = fraction of interpreters. Label: white where at least k of n picked, black elsewhere.
+  for (let i = 0; i < acc.length; i++) { const v = major ? (Math.round(acc[i] * n) >= k) * 255 : Math.round(acc[i] * 255); im.data.set([v, v, v, 255], i * 4); }
   g.putImageData(im, 0, 0);
-  c.toBlob(b => saveFile(`${s.name.replace(/\.\w+$/, '')}_${major ? 'label' : 'heatmap'}_n${n}.png`, b), 'image/png');
+  const stem = s.name.replace(/\.\w+$/, '');
+  c.toBlob(b => saveFile(major ? `${stem}_label_${k}of${n}.png` : `${stem}_heatmap_n${n}.png`, b), 'image/png');
 };
 
 $('#dlall').onclick = () => {
