@@ -1,96 +1,111 @@
 # Channel Picks
 
-A small website where several interpreters pick channelised features on the same seismic sections. Each save goes to a Google Sheet that you own. The picks are then combined into a heat map, a majority label and agreement numbers per section.
+Channel Picks is a lightweight web tool for collecting interpretations of channelised features on seismic sections from several interpreters. Each interpreter outlines the features they see. The interpretations are then combined into agreement heat maps, consensus labels and inter-interpreter agreement scores.
 
-The site is static, so it runs on GitHub Pages. The Google Sheet acts as its database.
+The tool was built to create reference labels for evaluating machine learning models that detect channelised features in field seismic data. Labels from a single interpreter carry that person's bias. Combining several independent interpretations gives a more reliable reference and a measure of how much interpreters agree.
 
-## What is in this folder
+**Live version:** https://ada-fb525.github.io/Channel-picks/
 
-| Path | What it is |
+## How it works
+
+- The website is a single static page hosted on GitHub Pages.
+- Interpreters enter a name or code and their level of experience, read the labelling guide, and draw closed polygons around each channelised feature. Sections without channelised features can be marked as such.
+- Each save is sent to a Google Apps Script web app, which appends it as a new row in a Google Sheet. Picks are also kept in the interpreter's browser, so unsent saves are retried automatically.
+- An organiser view (`?organiser`), protected by a key, shows the results for each section:
+  - a heat map of the fraction of interpreters who picked each pixel,
+  - a consensus label based on a selectable rule (more than half of the interpreters, a fixed percentage, or all interpreters),
+  - the mean pairwise Dice coefficient between interpreters,
+  - filters by experience level and by interpreter.
+- A Python script (`tools/fuse_picks.py`) produces the same outputs offline from the exported data.
+
+## Repository structure
+
+| Path | Contents |
 |---|---|
-| `index.html` | The website. |
-| `config.json` | Title, intro text and the Google Sheet address (`scriptUrl`). |
-| `guide.txt` | The labelling guide, as plain text. Edit it on GitHub with the pencil icon. |
-| `sections/` | The section images and `list.json`, which lists them in the order they are shown. |
-| `apps_script/Code.gs` | The script that connects the Google Sheet to the website. |
-| `tools/fuse_picks.py` | Builds heat maps, majority labels and agreement tables from the picks. |
+| `index.html` | The web application. |
+| `config.json` | Page title, introduction text and the address of the Apps Script web app (`scriptUrl`). |
+| `guide.txt` | The labelling guide shown to interpreters, as plain text. |
+| `sections/` | Section images and `list.json`, which sets the order in which they are shown. |
+| `apps_script/Code.gs` | Google Apps Script that stores the picks in a Google Sheet. |
+| `tools/fuse_picks.py` | Script that combines the picks into heat maps, labels and agreement tables. |
 
-## 1. Connect a Google Sheet (about 15 minutes)
+## Setting up your own copy
 
-1. Create a new Google Sheet. A personal Google account is safest, because some university accounts block the "Anyone" option below.
-2. In the Sheet, open **Extensions → Apps Script**. Delete the code you see and paste in everything from `apps_script/Code.gs`.
-3. In the Apps Script editor only, change `ORGANISER_KEY` to a long phrase that only you know. Do not put your real key in the copy of `Code.gs` that goes to GitHub, because that copy is public.
-4. Click **Save**, then **Deploy → New deployment**. Click the gear icon and choose **Web app**.
-   - Execute as: **Me**
-   - Who has access: **Anyone**
-5. Click **Deploy** and allow access. Google will say it hasn't verified the app. This is normal for your own script: click **Advanced**, then **Go to … (unsafe)**.
-6. Copy the **Web app URL**. It ends with `/exec`.
-7. Paste it into `config.json` as the value of `scriptUrl`.
+### 1. Google Sheet and Apps Script
 
-If you change `Code.gs` later, open **Deploy → Manage deployments**, click the pencil, choose **New version** and click **Deploy**. The URL stays the same.
+1. Create a new Google Sheet.
+2. Open **Extensions → Apps Script** and replace the default code with the contents of `apps_script/Code.gs`.
+3. In the Apps Script editor, set `ORGANISER_KEY` to a private phrase. Do not commit the real key to a public repository.
+4. Deploy it via **Deploy → New deployment → Web app**, with *Execute as: Me* and *Who has access: Anyone*.
+5. Copy the web app URL (ending in `/exec`) into `scriptUrl` in `config.json`.
 
-## 2. Put the site on GitHub Pages (about 10 minutes)
+The script only accesses the Sheet it is attached to (`@OnlyCurrentDoc`). After changing the script, publish a new version under **Deploy → Manage deployments**. The URL stays the same.
 
-1. On GitHub, create a new **public** repository, for example `channel-picks`.
-2. Click **Add file → Upload files** and drag in everything from this folder, keeping the `sections`, `apps_script` and `tools` folders.
-3. Go to **Settings → Pages**. Under **Build and deployment**, set **Source** to **Deploy from a branch**, choose the **main** branch and the **/(root)** folder, then click **Save**.
-4. After a minute or two, the site is live at `https://YOUR-USERNAME.github.io/channel-picks/`.
+### 2. Sections
 
-To change something later, edit or upload the file on GitHub. The site updates within a minute or two.
-
-## 3. Test it with one person
-
-1. Open the site, enter a code such as `T01`, choose an experience level and pick one or two test sections.
-2. Check that new rows appear in the **picks** tab of your Google Sheet.
-3. Open the organiser view (below), enter your key and click **Load picks**.
-4. When you are happy, delete the test rows from the Sheet. Keep the header row.
-
-## 4. Add your final sections
-
-1. Delete the `test_*.png` files from `sections/` and upload your own PNG or JPG files.
-2. Edit `sections/list.json` so it lists your file names, in the order you want them shown:
+1. Place the section images (PNG or JPG) in `sections/`.
+2. List their file names in `sections/list.json`, in the order they should be shown:
    ```json
-   ["crossline_035.png", "crossline_120.png", "inline_0480.png"]
+   ["inline_1234.png", "crossline_0567.png"]
    ```
-3. Rules that matter for the analysis:
-   - Export the sections on the **same pixel grid as your U-Net predictions**. Picks are stored in image pixels.
-   - Put the line number in each file name, so every pick can be traced back to the survey.
-   - **Freeze the sections before anyone starts.** Picks are tied to each file's name and size. `fuse_picks.py` leaves out picks made on an image of a different size.
+3. Use only letters, numbers, `_`, `-` and `.` in file names.
 
-## 5. Send it to the interpreters
+Picks are stored in image pixels. Export the sections on a known grid, ideally one pixel per trace and per time sample, without axes or margins, and with the same amplitude clipping for all sections. Any display scaling, such as vertical exaggeration, should be an integer factor and should be recorded, so that labels can be mapped back to the survey grid. Do not change the images once interpretation has started.
 
-Send each person the link. They can type their name or a code you give them (`S01`, `S02`, …). The page turns both into one ID, for example `Sara Ahmadi` becomes `SARA_AHMADI`, using English letters and numbers only. Codes keep the data anonymous. Names are personal data, so check with your supervisor whether you need consent for them.
+### 3. GitHub Pages
 
-Picks are also kept in each person's browser. If they come back on the same computer and browser, they can continue where they stopped. If a save does not reach the Sheet, the page says so and tries again on the next save. As a last resort, there is a **Download a copy of my picks** link at the bottom of the page.
+Push the repository to GitHub. Under **Settings → Pages**, deploy from the `main` branch and the root folder. The site is published at `https://<username>.github.io/<repository>/`.
 
-## Organiser view
+If `scriptUrl` is empty, the page runs in test mode and keeps picks only in the browser. To test locally, run `python -m http.server` in the repository folder and open `http://localhost:8000`.
 
-Open `https://YOUR-USERNAME.github.io/channel-picks/?organiser` and go to the **Results** tab. Enter your key and click **Load picks**. You can:
+## Data format
 
-- view the heat map or the label for each section. The label rule can be "More than half" (the default), a percentage, or "Everyone",
-- see how many interpreters a pixel needs to be in the label (for example "at least 11 of 20"),
-- see how many interpreters picked each section and their mean pairwise Dice,
-- filter by experience level, or leave out codes (for example your own),
-- download the heat map or label as PNG, and all picks as JSON.
+Each save is one row in the `picks` sheet:
 
-The organiser link is not secret, but nobody can load picks without the key.
+| Column | Description |
+|---|---|
+| `received_at` | Time the save was received. |
+| `code` | Interpreter name or code, in capitals, with spaces replaced by `_`. |
+| `level` | Experience level. |
+| `section` | Image file name. |
+| `width`, `height` | Image size in pixels when the pick was made. |
+| `no_channel` | `TRUE` if the interpreter marked the section as having no channelised feature. |
+| `n_polygons` | Number of polygons. |
+| `polygons` | Polygon vertices as JSON, `[[[x, y], ...], ...]`, in image pixels with the origin at the top-left corner. |
+| `client_time` | Time of the save in the interpreter's browser. |
 
-## Analysis for the paper
+Rows are never edited or deleted, so the Sheet is a complete log. In the analysis, only the latest save per interpreter and section is used.
 
-Download the Sheet (**File → Download → Comma-separated values**, with the **picks** tab open), then run:
+## Combining interpretations
+
+Export the `picks` sheet as CSV (**File → Download → Comma-separated values**), or download all picks as JSON from the organiser view. Then run:
 
 ```bash
 python tools/fuse_picks.py picks.csv sections results
 python tools/fuse_picks.py picks.csv sections results_70 --rule 0.7
-python tools/fuse_picks.py picks.csv sections results_phd --level "PhD student"
-python tools/fuse_picks.py picks.csv sections results_no_org --exclude ORG
+python tools/fuse_picks.py picks.csv sections results_phd --level "PhD student" --exclude ORG
 ```
 
-Only the latest save per interpreter and section counts. The script writes, per section, a heat map (`.npy` and `.png`) and a label (`.png`, more than half by default), plus `agreement.csv` and `interpreters.csv`. Use these files for numbers in the paper. The website preview fills shapes slightly differently at their edges.
+For each section, the script writes:
 
-## Things to know
+- `<name>_heatmap.npy` and `<name>_heatmap.png`: the fraction of interpreters who picked each pixel,
+- `<name>_label.png`: the consensus label (white = channelised feature),
+- `agreement.csv`: the number of interpreters, the mean pairwise Dice coefficient and the label rule per section,
+- `interpreters.csv`: the experience level and number of sections completed per interpreter.
 
-- The repository is public, so the page and the section images are public. Check that the data licence allows you to share the images.
-- The Sheet stores the name or code, experience level, section name, image size, polygons and save times. It stores no email addresses.
-- Anyone with the site link can submit picks. Each row records its code, so you can delete unexpected rows.
-- Test mode: if `scriptUrl` in `config.json` is empty, the page shows a banner and keeps picks only in the browser. You can try it on your own computer by running `python -m http.server` in this folder and opening `http://localhost:8000`.
+By default, a pixel belongs to the label if more than half of the interpreters picked it (`--rule majority`). With `--rule 0.7`, at least 70% must have picked it. An interpreter counts for a section if they drew at least one polygon or marked it as having no channelised feature. Picks made on an image of a different size are left out.
+
+Polygons are rasterised with Pillow. The preview in the organiser view can differ by a few pixels along polygon edges, so reported numbers should come from the script.
+
+Requirements: Python 3, NumPy and Pillow.
+
+## Limitations
+
+- There is no login. Interpreters are identified by the name or code they type, so two people who enter the same name are treated as one interpreter.
+- Anyone with the link can submit picks. Every row records its name or code, so unexpected rows can be removed from the Sheet.
+- The Sheet stores the name or code, experience level and picks. It does not store email addresses.
+- In a public repository, the page and the section images are publicly visible.
+
+## Citation
+
+If you use this tool, please cite the associated publication. The reference will be added here once it is available.
