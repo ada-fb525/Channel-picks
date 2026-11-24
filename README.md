@@ -9,7 +9,8 @@ The site is static, so it runs on GitHub Pages. The Google Sheet acts as its dat
 | Path | What it is |
 |---|---|
 | `index.html` | The website. |
-| `config.json` | Title, intro text, labelling guide and the Google Sheet address (`scriptUrl`). |
+| `config.json` | Title, intro text and the Google Sheet address (`scriptUrl`). |
+| `guide.txt` | The labelling guide, as plain text. Edit it on GitHub with the pencil icon. |
 | `sections/` | The section images and `list.json`, which lists them in the order they are shown. |
 | `apps_script/Code.gs` | The script that connects the Google Sheet to the website. |
 | `tools/fuse_picks.py` | Builds heat maps, majority labels and agreement tables from the picks. |
@@ -66,7 +67,8 @@ Picks are also kept in each person's browser. If they come back on the same comp
 
 Open `https://YOUR-USERNAME.github.io/channel-picks/?organiser` and go to the **Results** tab. Enter your key and click **Load picks**. You can:
 
-- view the heat map or the majority label (at least 50%) for each section,
+- view the heat map or the label for each section. The label rule can be "More than half" (the default), a percentage, or "Everyone",
+- see how many interpreters a pixel needs to be in the label (for example "at least 11 of 20"),
 - see how many interpreters picked each section and their mean pairwise Dice,
 - filter by experience level, or leave out codes (for example your own),
 - download the heat map or label as PNG, and all picks as JSON.
@@ -79,11 +81,12 @@ Download the Sheet (**File → Download → Comma-separated values**, with the *
 
 ```bash
 python tools/fuse_picks.py picks.csv sections results
+python tools/fuse_picks.py picks.csv sections results_70 --rule 0.7
 python tools/fuse_picks.py picks.csv sections results_phd --level "PhD student"
 python tools/fuse_picks.py picks.csv sections results_no_org --exclude ORG
 ```
 
-Only the latest save per interpreter and section counts. The script writes, per section, a heat map (`.npy` and `.png`) and a majority label (`.png`), plus `agreement.csv` and `interpreters.csv`. Use these files for numbers in the paper. The website preview fills shapes slightly differently at their edges.
+Only the latest save per interpreter and section counts. The script writes, per section, a heat map (`.npy` and `.png`) and a label (`.png`, more than half by default), plus `agreement.csv` and `interpreters.csv`. Use these files for numbers in the paper. The website preview fills shapes slightly differently at their edges.
 
 ## Things to know
 

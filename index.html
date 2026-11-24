@@ -203,6 +203,8 @@ async function init() {
   try { const r = await fetch('config.json', { cache: 'no-store' }); if (r.ok) cfg = { ...cfg, ...(await r.json()) }; } catch {}
   document.title = $('#title').textContent = cfg.title || 'Channel Picks';
   $('#intro').textContent = cfg.intro || ''; $('#intro').hidden = !cfg.intro;
+  // The labelling guide is plain text in guide.txt, so it can be edited on GitHub without touching any code.
+  try { const r = await fetch('guide.txt', { cache: 'no-store' }); if (r.ok) cfg.guide = (await r.text()).trim(); } catch {}
   $('#guidetext').textContent = cfg.guide || ''; $('#guidebox').hidden = !cfg.guide;
   // The guide starts open; once someone closes it, it stays closed on their next visit.
   if (state.guideClosed) $('#guidebox').open = false;
