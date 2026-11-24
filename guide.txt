@@ -1,10 +1,9 @@
-DRAFT: check with your supervisors before sharing.
 
 What to pick
 Pick every channelised feature you can see in the section. In a vertical section, a channelised feature usually shows:
-• a concave-up erosional base that cuts down into the reflections below (truncation),
-• a fill that onlaps the margins, or has chaotic, mounded or inclined internal reflections,
-• a lens, U or V shape that differs clearly from the surrounding continuous reflections.
+• a U-shaped or bowl-shaped bottom that cuts down into the layers below, so those layers stop where they meet it,
+• a fill inside that looks different from the layers around it, for example broken, wavy or sloping reflections,
+• an overall lens, U or V shape that stands out from the flat, continuous layers around it.
 
 How to pick
 • Draw one closed shape around the whole fill of each channelised feature, from its base to its top.
@@ -14,6 +13,5 @@ How to pick
 • If a section has no channelised feature, tick "No channel in this section" and save.
 
 Please
-• Work on your own. Do not discuss the sections with others until everyone has finished.
 • Use zoom when you need it.
 • Click Save on each section. Moving to another section also saves.
